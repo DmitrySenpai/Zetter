@@ -65,8 +65,7 @@ public class PencilParametersTab extends AbstractTab {
 
     @Override
     public void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        guiGraphics.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, Color.SCREEN_GRAY.getRGB());
-
+        this.renderOverlay(guiGraphics);
         if (this.parentScreen.getMenu().getCurrentToolParameters() instanceof BlendingParameterHolder) {
             this.blendingWidget.render(guiGraphics, mouseX, mouseY, partialTicks);
         }

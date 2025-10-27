@@ -29,6 +29,9 @@ public abstract class AbstractTab extends AbstractEaselWidget {
             widget.renderLabels(guiGraphics, mouseX, mouseY);
         }
     }
+    public void renderOverlay(GuiGraphics guiGraphics) {
+        guiGraphics.blit(AbstractEaselWidget.EASEL_WIDGETS_TEXTURE_RESOURCE, this.getX(), this.getY(), 0, 106, this.width, this.height, 256, 256);
+    }
 
     public void containerTick() {
 
