@@ -24,6 +24,7 @@ This project is not affiliated with the original Zetter developers and is not an
 
 This project is licensed under the **Mozilla Public License 2.0**.
 
+---
 
 ### Zetter — Minecraft Painting Mod
 
