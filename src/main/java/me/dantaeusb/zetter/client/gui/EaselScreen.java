@@ -37,7 +37,7 @@ import java.util.List;
 
 public class EaselScreen extends AbstractContainerScreen<EaselMenu> implements ContainerListener, ActionListener {
     // This is the resource location for the background image
-    public static final ResourceLocation EASEL_GUI_TEXTURE_RESOURCE = new ResourceLocation(Zetter.MOD_ID, "textures/gui/easel.png");
+    public static final ResourceLocation EASEL_GUI_TEXTURE_RESOURCE = ResourceLocation.fromNamespaceAndPath(Zetter.MOD_ID, "textures/gui/easel.png");
 
     private final List<AbstractEaselWidget> paintingWidgets = Lists.newArrayList();
 
@@ -220,7 +220,7 @@ public class EaselScreen extends AbstractContainerScreen<EaselMenu> implements C
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics);
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -512,13 +512,13 @@ public class EaselScreen extends AbstractContainerScreen<EaselMenu> implements C
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double deltaX, double deltaY) {
         if (hasControlDown()) {
             if (this.getMenu().getCurrentTool() == Tools.BRUSH) {
                 AbstractToolParameters parameters = this.getMenu().getCurrentToolParameters();
 
                 if (parameters instanceof SizeParameterHolder) {
-                    float newSize = ((SizeParameterHolder) parameters).getSize() + (float) delta;
+                    float newSize = ((SizeParameterHolder) parameters).getSize() + (float) deltaY;
                     newSize = Math.min(Math.max(newSize, BrushParameters.MIN_SIZE), BrushParameters.MAX_SIZE);
 
                     ((SizeParameterHolder) parameters).setSize(newSize);
@@ -528,7 +528,7 @@ public class EaselScreen extends AbstractContainerScreen<EaselMenu> implements C
                 AbstractToolParameters parameters = this.getMenu().getCurrentToolParameters();
 
                 if (parameters instanceof SizeParameterHolder) {
-                    float newSize = ((SizeParameterHolder) parameters).getSize() + (delta > 0 ? 1 : -1);
+                    float newSize = ((SizeParameterHolder) parameters).getSize() + (deltaY > 0 ? 1 : -1);
                     newSize = Math.min(Math.max(newSize, PencilParameters.MIN_SIZE), PencilParameters.MAX_SIZE);
 
                     ((SizeParameterHolder) parameters).setSize(newSize);
@@ -537,7 +537,7 @@ public class EaselScreen extends AbstractContainerScreen<EaselMenu> implements C
             }
         }
 
-        if (this.canvasWidget.mouseScrolled(mouseX, mouseY, delta)) {
+        if (this.canvasWidget.mouseScrolled(mouseX, mouseY, deltaX, deltaY)) {
             return true;
         }
 

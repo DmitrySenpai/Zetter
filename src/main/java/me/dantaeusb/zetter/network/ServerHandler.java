@@ -22,7 +22,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.security.InvalidParameterException;
@@ -83,7 +82,7 @@ public class ServerHandler {
 
             SCanvasSyncPacket canvasSyncMessage = new SCanvasSyncPacket(canvasName, canvasData, System.currentTimeMillis());
 
-            ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncMessage);
+            ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncMessage);
         } catch (Exception e) {
             Zetter.LOG.error(e.getMessage());
             throw e;
@@ -111,7 +110,7 @@ public class ServerHandler {
 
             SCanvasSyncViewPacket canvasSyncViewMessage = new SCanvasSyncViewPacket(canvasName, canvasData, System.currentTimeMillis(), packetIn.getHand());
 
-            ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncViewMessage);
+            ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncViewMessage);
         } catch (Exception e) {
             Zetter.LOG.error(e.getMessage());
             throw e;
@@ -138,7 +137,7 @@ public class ServerHandler {
                 Zetter.LOG.error("Cannot find world canvas capability");
 
                 SCanvasSyncExportErrorPacket canvasSyncExportErrorMessage = new SCanvasSyncExportErrorPacket("console.zetter.error.unknown", null);
-                ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncExportErrorMessage);
+                ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncExportErrorMessage);
 
                 return;
             }
@@ -151,7 +150,7 @@ public class ServerHandler {
 
             if (canvasCode == null) {
                 SCanvasSyncExportErrorPacket canvasSyncExportErrorMessage = new SCanvasSyncExportErrorPacket("console.zetter.error.painting_not_found", packetIn.requestTitle);
-                ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncExportErrorMessage);
+                ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncExportErrorMessage);
 
                 return;
             }
@@ -160,18 +159,18 @@ public class ServerHandler {
 
             if (paintingData == null) {
                 SCanvasSyncExportErrorPacket canvasSyncExportErrorMessage = new SCanvasSyncExportErrorPacket("console.zetter.error.painting_not_found", canvasCode);
-                ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncExportErrorMessage);
+                ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncExportErrorMessage);
 
                 return;
             }
 
             SCanvasSyncExportPacket canvasSyncExportMessage = new SCanvasSyncExportPacket(canvasCode, paintingData, System.currentTimeMillis());
-            ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncExportMessage);
+            ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncExportMessage);
         } catch (Exception e) {
             Zetter.LOG.error(e.getMessage());
 
             SCanvasSyncExportErrorPacket canvasSyncExportErrorMessage = new SCanvasSyncExportErrorPacket("console.zetter.error.unknown", null);
-            ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> sendingPlayer), canvasSyncExportErrorMessage);
+            ZetterNetwork.sendToPlayer(sendingPlayer, canvasSyncExportErrorMessage);
 
             throw e;
         }

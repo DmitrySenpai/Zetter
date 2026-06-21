@@ -1,7 +1,7 @@
 package me.dantaeusb.zetter.client.gui.artisttable;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import me.dantaeusb.zetter.capability.canvastracker.CanvasTracker;
 import me.dantaeusb.zetter.client.gui.ArtistTableScreen;
 import me.dantaeusb.zetter.client.renderer.CanvasRenderer;
@@ -57,9 +57,11 @@ public class PreviewWidget extends AbstractArtistTableWidget implements Renderab
             poseStack.translate(displacement.getA(), displacement.getB(), 1.0F);
             poseStack.scale(scale, scale, 1.0F);
 
-            MultiBufferSource.BufferSource renderTypeBufferImpl = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-            CanvasRenderer.getInstance().renderCanvas(poseStack, renderTypeBufferImpl, Helper.COMBINED_CANVAS_CODE, canvasData, 0xF000F0);
-            renderTypeBufferImpl.endBatch();
+            try (ByteBufferBuilder bufferBuilder = new ByteBufferBuilder(1536)) {
+                MultiBufferSource.BufferSource renderTypeBufferImpl = MultiBufferSource.immediate(bufferBuilder);
+                CanvasRenderer.getInstance().renderCanvas(poseStack, renderTypeBufferImpl, Helper.COMBINED_CANVAS_CODE, canvasData, 0xF000F0);
+                renderTypeBufferImpl.endBatch();
+            }
 
             poseStack.popPose();
         }

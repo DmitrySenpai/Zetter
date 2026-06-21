@@ -4,11 +4,10 @@ import me.dantaeusb.zetter.Zetter;
 import me.dantaeusb.zetter.network.ServerHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
 import javax.annotation.Nullable;
 import java.security.InvalidParameterException;
-import java.util.function.Supplier;
 
 public class CCanvasRequestExportPacket {
     public final @Nullable String requestCode;
@@ -67,8 +66,7 @@ public class CCanvasRequestExportPacket {
         }
     }
 
-    public static void handle(final CCanvasRequestExportPacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
+    public static void handle(final CCanvasRequestExportPacket packetIn, PayloadContext ctx) {
         ctx.setPacketHandled(true);
 
         final ServerPlayer sendingPlayer = ctx.getSender();

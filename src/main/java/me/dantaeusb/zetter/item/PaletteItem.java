@@ -1,5 +1,6 @@
 package me.dantaeusb.zetter.item;
 
+import me.dantaeusb.zetter.core.Helper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -19,13 +20,13 @@ public class PaletteItem extends Item
      * @return
      */
     @Override
-    public boolean isRepairable(ItemStack stack) {
+    public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
         return false;
     }
 
     public static int[] getPaletteColors(ItemStack stack)
     {
-        CompoundTag compoundNBT = stack.getTag();
+        CompoundTag compoundNBT = Helper.getCustomData(stack);
 
         int[] paletteColors;
         if (compoundNBT != null && compoundNBT.contains(NBT_TAG_NAME_PALETTE_COLORS)) {
@@ -89,8 +90,9 @@ public class PaletteItem extends Item
             return;
         }
 
-        CompoundTag compoundNBT = stack.getOrCreateTag();
+        CompoundTag compoundNBT = Helper.getOrCreateCustomData(stack);
         compoundNBT.putIntArray(NBT_TAG_NAME_PALETTE_COLORS, paletteColors);
+        Helper.setCustomData(stack, compoundNBT);
     }
 
     public static void updatePaletteColor(ItemStack stack, int paletteSlot, int color) {

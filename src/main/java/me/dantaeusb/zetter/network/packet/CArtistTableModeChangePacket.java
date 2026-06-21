@@ -5,10 +5,9 @@ import me.dantaeusb.zetter.menu.ArtistTableMenu;
 import me.dantaeusb.zetter.network.ServerHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.fml.LogicalSide;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
-import java.util.function.Supplier;
 
 public class CArtistTableModeChangePacket {
     private final int windowId;
@@ -47,13 +46,12 @@ public class CArtistTableModeChangePacket {
         return this.mode;
     }
 
-    public static void handle(final CArtistTableModeChangePacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        LogicalSide sideReceived = ctx.getDirection().getReceptionSide();
+    public static void handle(final CArtistTableModeChangePacket packetIn, PayloadContext ctx) {
+        LogicalSide sideReceived = (ctx.isClientSide() ? LogicalSide.CLIENT : LogicalSide.SERVER);
         ctx.setPacketHandled(true);
 
         if (sideReceived != LogicalSide.SERVER) {
-            Zetter.LOG.warn("ArtistTableModeChange received on wrong side:" + ctx.getDirection().getReceptionSide());
+            Zetter.LOG.warn("ArtistTableModeChange received on wrong side:" + (ctx.isClientSide() ? LogicalSide.CLIENT : LogicalSide.SERVER));
             return;
         }
 

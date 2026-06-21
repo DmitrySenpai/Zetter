@@ -11,9 +11,12 @@ import me.dantaeusb.zetter.storage.PaintingData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerEntity;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -27,8 +30,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.entity.IEntityAdditionalSpawnData;
-import net.minecraftforge.network.NetworkHooks;
+import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
 import org.apache.commons.lang3.Validate;
 
 import javax.annotation.Nonnull;
@@ -36,7 +38,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Map;
 
-public class PaintingEntity extends HangingEntity implements IEntityAdditionalSpawnData {
+public class PaintingEntity extends HangingEntity implements IEntityWithComplexSpawn {
     public static final String NBT_TAG_FACING = "Facing";
     public static final String NBT_TAG_BLOCK_SIZE = "BlockSize";
     public static final String NBT_TAG_MATERIAL = "Material";
@@ -61,6 +63,10 @@ public class PaintingEntity extends HangingEntity implements IEntityAdditionalSp
 
     public PaintingEntity(EntityType<? extends PaintingEntity> type, Level world) {
         super(type, world);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
 
     public PaintingEntity(Level world, BlockPos pos, Direction facing, Materials material, boolean hasPlate, String canvasCode, int[] blockSize, int generation) {
@@ -126,51 +132,45 @@ public class PaintingEntity extends HangingEntity implements IEntityAdditionalSp
         this.recalculateBoundingBox();
     }
 
-    /**
-     * Updates the entity bounding box based on current facing
-     */
-    protected void recalculateBoundingBox() {
-        if (this.direction != null) {
-            double xCenter = (double)this.pos.getX() + 0.5D;
-            double yCenter = (double)this.pos.getY() + 0.5D;
-            double zCenter = (double)this.pos.getZ() + 0.5D;
+    @Override
+    protected AABB calculateBoundingBox(BlockPos pos, Direction direction) {
+        double xCenter = (double)pos.getX() + 0.5D;
+        double yCenter = (double)pos.getY() + 0.5D;
+        double zCenter = (double)pos.getZ() + 0.5D;
 
-            double thicknessOffset = 0.5D - (1.0D / 32.0D);
+        double thicknessOffset = 0.5D - (1.0D / 32.0D);
 
-            double hCenterOffset = this.offs(this.getWidth());
-            double vCenterOffset = this.offs(this.getHeight());
+        double hCenterOffset = this.offs(this.getWidth());
+        double vCenterOffset = this.offs(this.getHeight());
 
-            xCenter = xCenter - (double)this.direction.getStepX() * thicknessOffset;
-            zCenter = zCenter - (double)this.direction.getStepZ() * thicknessOffset;
+        xCenter = xCenter - (double)direction.getStepX() * thicknessOffset;
+        zCenter = zCenter - (double)direction.getStepZ() * thicknessOffset;
 
-            yCenter = yCenter + vCenterOffset;
+        yCenter = yCenter + vCenterOffset;
 
-            Direction direction = this.direction.getCounterClockWise();
+        Direction horizontalDirection = direction.getCounterClockWise();
 
-            xCenter = xCenter + hCenterOffset * (double)direction.getStepX();
-            zCenter = zCenter + hCenterOffset * (double)direction.getStepZ();
+        xCenter = xCenter + hCenterOffset * (double)horizontalDirection.getStepX();
+        zCenter = zCenter + hCenterOffset * (double)horizontalDirection.getStepZ();
 
-            this.setPosRaw(xCenter, yCenter, zCenter);
+        double xWidth = this.getWidth();
+        double yHeight = this.getHeight();
+        double zWidth = this.getWidth();
 
-            double xWidth = this.getWidth();
-            double yHeight = this.getHeight();
-            double zWidth = this.getWidth();
-
-            if (this.direction.getAxis() == Direction.Axis.Z) {
-                zWidth = 1.0D;
-            } else {
-                xWidth = 1.0D;
-            }
-
-            xWidth = xWidth / 16.0D / 2.0D;
-            yHeight = yHeight / 16.0D / 2.0D;
-            zWidth = zWidth / 16.0D / 2.0D;
-
-            this.setBoundingBox(new AABB(
-                xCenter - xWidth, yCenter - yHeight, zCenter - zWidth,
-                xCenter + xWidth, yCenter + yHeight, zCenter + zWidth
-            ));
+        if (direction.getAxis() == Direction.Axis.Z) {
+            zWidth = 1.0D;
+        } else {
+            xWidth = 1.0D;
         }
+
+        xWidth = xWidth / 16.0D / 2.0D;
+        yHeight = yHeight / 16.0D / 2.0D;
+        zWidth = zWidth / 16.0D / 2.0D;
+
+        return new AABB(
+            xCenter - xWidth, yCenter - yHeight, zCenter - zWidth,
+            xCenter + xWidth, yCenter + yHeight, zCenter + zWidth
+        );
     }
 
     /**
@@ -263,7 +263,7 @@ public class PaintingEntity extends HangingEntity implements IEntityAdditionalSp
         this.setDirection(this.direction);
     }
 
-    public void writeSpawnData(FriendlyByteBuf buffer) {
+    public void writeSpawnData(RegistryFriendlyByteBuf buffer) {
         buffer.writeBlockPos(this.pos);
         buffer.writeByte((byte)this.direction.get2DDataValue());
 
@@ -276,7 +276,7 @@ public class PaintingEntity extends HangingEntity implements IEntityAdditionalSp
         buffer.writeBoolean(this.hasPlate);
     }
 
-    public void readSpawnData(FriendlyByteBuf buffer) {
+    public void readSpawnData(RegistryFriendlyByteBuf buffer) {
         this.pos = buffer.readBlockPos();
         this.direction = Direction.from2DDataValue(buffer.readByte());
 
@@ -332,21 +332,25 @@ public class PaintingEntity extends HangingEntity implements IEntityAdditionalSp
     }
 
     /**
-     * Sets the location and Yaw/Pitch of an entity in the world
-     * Do not re-center bounding box
-     * Copied from PaintingEntity
+     * Sets the center sent by the server without converting it back to a
+     * BlockAttachedEntity anchor. For even-width paintings that center can be
+     * exactly on a block border, and setPos would move the anchor one block.
      */
     public void moveTo(double x, double y, double z, float yaw, float pitch) {
-        this.setPos(x, y, z);
+        this.setPosRaw(x, y, z);
     }
 
     /**
      * Sets a target for the client to interpolate towards over the next few ticks
-     * Copied from PaintingEntity
      */
+    @Override
+    public void lerpTo(double x, double y, double z, float yaw, float pitch, int posRotationIncrements) {
+        this.setPosRaw(x, y, z);
+        this.setRot(yaw, pitch);
+    }
+
     public void lerpTo(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
-        BlockPos blockpos = this.pos.offset((int) (x - this.getX()), (int) (y - this.getY()), (int) (z - this.getZ()));
-        this.setPos(blockpos.getX(), blockpos.getY(), blockpos.getZ());
+        this.lerpTo(x, y, z, yaw, pitch, posRotationIncrements);
     }
 
     public void playPlacementSound() {
@@ -360,8 +364,8 @@ public class PaintingEntity extends HangingEntity implements IEntityAdditionalSp
 
     @Nonnull
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return NetworkHooks.getEntitySpawningPacket(this);
+    public Packet<ClientGamePacketListener> getAddEntityPacket(ServerEntity serverEntity) {
+        return new ClientboundAddEntityPacket(this, serverEntity);
     }
 
     public enum Materials {

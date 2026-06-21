@@ -5,9 +5,8 @@ import me.dantaeusb.zetter.core.Helper;
 import me.dantaeusb.zetter.network.ServerHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * Rename painting packet used to send updated name field in
@@ -59,8 +58,7 @@ public class CSignPaintingPacket {
         return this.paintingTitle;
     }
 
-    public static void handle(final CSignPaintingPacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
+    public static void handle(final CSignPaintingPacket packetIn, PayloadContext ctx) {
         ctx.setPacketHandled(true);
 
         final ServerPlayer sendingPlayer = ctx.getSender();

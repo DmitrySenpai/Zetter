@@ -15,8 +15,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -126,8 +126,11 @@ public class CanvasServerTracker implements CanvasTracker {
             return null;
         }
 
-        return this.level.getServer().overworld().getDataStorage().get(
-            (compoundTag) -> {
+        SavedData.Factory<T> factory = new SavedData.Factory<>(
+            () -> {
+                throw new IllegalStateException("Canvas data must be loaded from NBT");
+            },
+            (compoundTag, provider) -> {
                 int canvasTypeInt = -1;
                 String canvasResourceLocation = compoundTag.getString(AbstractCanvasData.NBT_TAG_TYPE);
 
@@ -157,7 +160,7 @@ public class CanvasServerTracker implements CanvasTracker {
                 }
 
                 final String finalCanvasResourceLocation = canvasResourceLocation;
-                Optional<? extends CanvasDataType<?>> type = ZetterRegistries.CANVAS_TYPE.get().getEntries().stream()
+                Optional<? extends CanvasDataType<?>> type = ZetterRegistries.CANVAS_TYPE.entrySet().stream()
                     .filter((entry) -> entry.getKey().location().toString().equals(finalCanvasResourceLocation))
                     .map(Map.Entry::getValue)
                     .findFirst();
@@ -176,8 +179,10 @@ public class CanvasServerTracker implements CanvasTracker {
 
                 return canvasData;
             },
-            canvasCode
+            null
         );
+
+        return this.level.getServer().overworld().getDataStorage().get(factory, canvasCode);
     }
 
     /**
@@ -195,12 +200,12 @@ public class CanvasServerTracker implements CanvasTracker {
         }
 
         CanvasRegisterEvent.Pre preEvent = new CanvasRegisterEvent.Pre(canvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(preEvent);
+        NeoForge.EVENT_BUS.post(preEvent);
 
         this.level.getServer().overworld().getDataStorage().set(canvasCode, canvasData);
 
         CanvasRegisterEvent.Post postEvent = new CanvasRegisterEvent.Post(canvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(postEvent);
+        NeoForge.EVENT_BUS.post(postEvent);
     }
 
     /**
@@ -226,7 +231,7 @@ public class CanvasServerTracker implements CanvasTracker {
         long timestamp = System.currentTimeMillis();
 
         CanvasUnregisterEvent.Pre preEvent = new CanvasUnregisterEvent.Pre(canvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(preEvent);
+        NeoForge.EVENT_BUS.post(preEvent);
 
         int canvasId = Integer.parseInt(canvasCode.substring(CanvasData.CODE_PREFIX.length()));
         this.clearCanvasId(canvasId);
@@ -236,16 +241,16 @@ public class CanvasServerTracker implements CanvasTracker {
         if (trackingPlayers != null) {
             for (PlayerTrackingCanvas trackingPlayer : trackingPlayers) {
                 SCanvasRemovalPacket canvasRemovalPacket = new SCanvasRemovalPacket(canvasCode, System.currentTimeMillis());
+                ServerPlayer player = (ServerPlayer) this.level.getPlayerByUUID(trackingPlayer.playerId);
 
-                ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(
-                    () -> (ServerPlayer) this.level.getPlayerByUUID(trackingPlayer.playerId)),
-                    canvasRemovalPacket
-                );
+                if (player != null) {
+                    ZetterNetwork.sendToPlayer(player, canvasRemovalPacket);
+                }
             }
         }
 
         CanvasUnregisterEvent.Post postEvent = new CanvasUnregisterEvent.Post(canvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(postEvent);
+        NeoForge.EVENT_BUS.post(postEvent);
     }
 
     /**
@@ -269,7 +274,7 @@ public class CanvasServerTracker implements CanvasTracker {
                 ServerPlayer playerEntity = server.getPlayerList().getPlayer(playerTrackingCanvas.playerId);
 
                 SCanvasSyncPacket<?> canvasSyncMessage = new SCanvasSyncPacket(canvasCode, this.getCanvasData(canvasCode), System.currentTimeMillis());
-                ZetterNetwork.simpleChannel.send(PacketDistributor.PLAYER.with(() -> playerEntity), canvasSyncMessage);
+                ZetterNetwork.sendToPlayer(playerEntity, canvasSyncMessage);
             }
         }
 

@@ -1,8 +1,8 @@
 package me.dantaeusb.zetter.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
 import me.dantaeusb.zetter.client.renderer.CanvasRenderer;
 import me.dantaeusb.zetter.core.Helper;
 import me.dantaeusb.zetter.core.ZetterNetwork;
@@ -121,7 +121,7 @@ public class PaintingScreen extends Screen {
         String title = this.title.isEmpty() ? DEFAULT_TITLE.getString() : this.title;
 
         CSignPaintingPacket signPaintingPacket = new CSignPaintingPacket(slot, title);
-        ZetterNetwork.simpleChannel.sendToServer(signPaintingPacket);
+        ZetterNetwork.sendToServer(signPaintingPacket);
 
         this.minecraft.player.closeContainer();
     }
@@ -168,6 +168,10 @@ public class PaintingScreen extends Screen {
         this.tick++;
     }
 
+    @Override
+    protected void renderBlurredBackground(float partialTick) {
+    }
+
     /**
      * Cancel closing screen when pressing "E", handle input properly
      * @param keyCode
@@ -200,7 +204,7 @@ public class PaintingScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
+        guiGraphics.fill(0, 0, this.width, this.height, 0x99000000);
         this.setFocused((GuiEventListener)null);
 
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
@@ -230,9 +234,11 @@ public class PaintingScreen extends Screen {
         poseStack.translate(this.paintingOffsetX, this.paintingOffsetY, 1.0F);
         poseStack.scale(this.paintingScale, this.paintingScale, 1.0F);
 
-        MultiBufferSource.BufferSource renderTypeBufferImpl = MultiBufferSource.immediate(Tesselator.getInstance().getBuilder());
-        CanvasRenderer.getInstance().renderCanvas(poseStack, renderTypeBufferImpl, this.canvasCode, this.canvasData, 0xF000F0);
-        renderTypeBufferImpl.endBatch();
+        try (ByteBufferBuilder bufferBuilder = new ByteBufferBuilder(1536)) {
+            MultiBufferSource.BufferSource renderTypeBufferImpl = MultiBufferSource.immediate(bufferBuilder);
+            CanvasRenderer.getInstance().renderCanvas(poseStack, renderTypeBufferImpl, this.canvasCode, this.canvasData, 0xF000F0);
+            renderTypeBufferImpl.endBatch();
+        }
 
         poseStack.popPose();
 

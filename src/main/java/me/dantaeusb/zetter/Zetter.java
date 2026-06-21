@@ -1,16 +1,15 @@
 package me.dantaeusb.zetter;
 
 import me.dantaeusb.zetter.core.*;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-// The value here should match an entry in the META-INF/mods.toml file
+// The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Zetter.MOD_ID)
 public class Zetter
 {
@@ -29,20 +28,21 @@ public class Zetter
 
     public static boolean quarkEnabled;
 
-    public Zetter() {
+    public Zetter(IEventBus modEventBus, ModContainer modContainer) {
         instance = this;
 
         quarkEnabled = ModList.get().isLoaded("quark");
-        MOD_EVENT_BUS = FMLJavaModLoadingContext.get().getModEventBus();
+        MOD_EVENT_BUS = modEventBus;
 
-        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, ZetterConfig.serverSpec, "zetter-server.toml");
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ZetterConfig.clientSpec, "zetter-client.toml");
+        modContainer.registerConfig(ModConfig.Type.SERVER, ZetterConfig.serverSpec, "zetter-server.toml");
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ZetterConfig.clientSpec, "zetter-client.toml");
 
         ZetterBlocks.init(MOD_EVENT_BUS);
         ZetterItems.init(MOD_EVENT_BUS);
         ZetterBlockEntities.init(MOD_EVENT_BUS);
         ZetterContainerMenus.init(MOD_EVENT_BUS);
         ZetterEntities.init(MOD_EVENT_BUS);
+        ZetterCapabilities.init(MOD_EVENT_BUS);
         ZetterCraftingRecipes.init(MOD_EVENT_BUS);
         ZetterConsoleCommands.init(MOD_EVENT_BUS);
 

@@ -12,7 +12,6 @@ import me.dantaeusb.zetter.item.PaintingItem;
 import me.dantaeusb.zetter.storage.AbstractCanvasData;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Timer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
@@ -22,11 +21,11 @@ import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 
 public class CanvasTooltipRenderer implements ClientTooltipComponent {
-  private static final ResourceLocation CANVAS_PENDING_BORDER_TEXTURE_RESOURCE = new ResourceLocation(Zetter.MOD_ID, "textures/gui/tooltip/canvas_pending_border.png");
-  private static final ResourceLocation CANVAS_PENDING_LOADER_TEXTURE_RESOURCE = new ResourceLocation(Zetter.MOD_ID, "textures/gui/tooltip/canvas_pending_loader.png");
+  private static final ResourceLocation CANVAS_PENDING_BORDER_TEXTURE_RESOURCE = ResourceLocation.fromNamespaceAndPath(Zetter.MOD_ID, "textures/gui/tooltip/canvas_pending_border.png");
+  private static final ResourceLocation CANVAS_PENDING_LOADER_TEXTURE_RESOURCE = ResourceLocation.fromNamespaceAndPath(Zetter.MOD_ID, "textures/gui/tooltip/canvas_pending_loader.png");
 
   private final CanvasComponent component;
-  private final Timer loaderTimer = new Timer(3.0F, 0L);
+  private long lastLoaderFrameMillis = -1L;
   private int loaderFrame = 0;
 
   public CanvasTooltipRenderer(CanvasComponent component) {
@@ -130,9 +129,15 @@ public class CanvasTooltipRenderer implements ClientTooltipComponent {
     guiGraphics.blit(CANVAS_PENDING_BORDER_TEXTURE_RESOURCE, 3, 3, scaledWidth - 6, scaledHeight - 6, 3, 3, 1, 1, 7, 7);
 
     // Loading
-    this.loaderFrame += this.loaderTimer.advanceTime(Util.getMillis()) % 4;
-    if (this.loaderFrame >= 4) {
-      this.loaderFrame = 0;
+    long currentMillis = Util.getMillis();
+    if (this.lastLoaderFrameMillis < 0L) {
+      this.lastLoaderFrameMillis = currentMillis;
+    } else {
+      int frames = (int) ((currentMillis - this.lastLoaderFrameMillis) / 333L);
+      if (frames > 0) {
+        this.lastLoaderFrameMillis += frames * 333L;
+        this.loaderFrame = (this.loaderFrame + frames) % 4;
+      }
     }
 
     if (this.loaderFrame == 3) {

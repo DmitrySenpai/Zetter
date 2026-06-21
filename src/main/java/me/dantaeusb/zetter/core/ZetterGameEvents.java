@@ -8,14 +8,15 @@ import me.dantaeusb.zetter.menu.EaselMenu;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerContainerEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-@Mod.EventBusSubscriber(modid = Zetter.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Zetter.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class ZetterGameEvents {
     @SubscribeEvent
     public static void onPlayerDisconnected(PlayerEvent.PlayerLoggedOutEvent event) {
@@ -26,7 +27,7 @@ public class ZetterGameEvents {
     }
 
     @SubscribeEvent
-    public static void tickCanvasTracker(TickEvent.ServerTickEvent event) {
+    public static void tickCanvasTracker(ServerTickEvent.Post event) {
         CanvasServerTracker canvasTracker = (CanvasServerTracker) Helper.getLevelCanvasTracker(ServerLifecycleHooks.getCurrentServer().overworld());
         canvasTracker.tick();
     }
@@ -36,8 +37,8 @@ public class ZetterGameEvents {
      * @param event
      */
     @SubscribeEvent
-    public static void onRenderTickStart(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && Minecraft.getInstance().level != null) {
+    public static void onRenderTickStart(ClientTickEvent.Post event) {
+        if (Minecraft.getInstance().level != null) {
             CanvasRenderer.getInstance().update(Util.getMillis());
         }
 

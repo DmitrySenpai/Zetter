@@ -5,9 +5,8 @@ import me.dantaeusb.zetter.core.Helper;
 import me.dantaeusb.zetter.network.ServerHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
-import java.util.function.Supplier;
 
 /**
  * Absolute copy of request packet but we have to copy them cause
@@ -47,8 +46,7 @@ public class CCanvasUnloadRequestPacket {
         return this.canvasName;
     }
 
-    public static void handle(final CCanvasUnloadRequestPacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
+    public static void handle(final CCanvasUnloadRequestPacket packetIn, PayloadContext ctx) {
         ctx.setPacketHandled(true);
 
         final ServerPlayer sendingPlayer = ctx.getSender();

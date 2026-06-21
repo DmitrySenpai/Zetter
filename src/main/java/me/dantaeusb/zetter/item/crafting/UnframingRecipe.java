@@ -1,21 +1,21 @@
 package me.dantaeusb.zetter.item.crafting;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import me.dantaeusb.zetter.core.Helper;
 import me.dantaeusb.zetter.core.ZetterCraftingRecipes;
 import me.dantaeusb.zetter.core.ZetterItems;
 import me.dantaeusb.zetter.item.FrameItem;
 import me.dantaeusb.zetter.item.PaintingItem;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.GsonHelper;
-import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -28,8 +28,8 @@ import org.jetbrains.annotations.NotNull;
 public class UnframingRecipe extends CustomRecipe {
     private final Ingredient inputFrame;
 
-    public UnframingRecipe(ResourceLocation id, Ingredient inputFrame) {
-        super(id, CraftingBookCategory.MISC);
+    public UnframingRecipe(Ingredient inputFrame) {
+        super(CraftingBookCategory.MISC);
 
         this.inputFrame = inputFrame;
     }
@@ -43,15 +43,15 @@ public class UnframingRecipe extends CustomRecipe {
      * Used to check if a recipe matches current crafting inventory
      * @todo: [LOW] Maybe we can just extend ShapelessRecipe
      */
-    public boolean matches(CraftingContainer craftingInventory, Level world) {
+    public boolean matches(CraftingInput craftingInventory, Level world) {
         ItemStack frameStack = ItemStack.EMPTY;
 
-        for(int i = 0; i < craftingInventory.getContainerSize(); ++i) {
+        for(int i = 0; i < craftingInventory.size(); ++i) {
             if (craftingInventory.getItem(i).isEmpty()) {
                 continue;
             }
 
-            if (this.inputFrame.test(craftingInventory.getItem(i))) {
+            if (this.isFrameIngredient(craftingInventory.getItem(i))) {
                 if (!frameStack.isEmpty()) {
                     // We already found frame
                     return false;
@@ -67,8 +67,8 @@ public class UnframingRecipe extends CustomRecipe {
         return !frameStack.isEmpty() && PaintingItem.getPaintingCode(frameStack) != null;
     }
 
-    public NonNullList<ItemStack> getRemainingItems(CraftingContainer inv) {
-        NonNullList<ItemStack> remainingItems = NonNullList.withSize(inv.getContainerSize(), ItemStack.EMPTY);
+    public NonNullList<ItemStack> getRemainingItems(CraftingInput inv) {
+        NonNullList<ItemStack> remainingItems = NonNullList.withSize(inv.size(), ItemStack.EMPTY);
 
         for(int i = 0; i < remainingItems.size(); ++i) {
             ItemStack stackInSlot = inv.getItem(i);
@@ -92,11 +92,11 @@ public class UnframingRecipe extends CustomRecipe {
     /**
      * Returns an Item that is the result of this recipe
      */
-    public @NotNull ItemStack assemble(CraftingContainer craftingInventory, RegistryAccess registryAccess) {
+    public @NotNull ItemStack assemble(CraftingInput craftingInventory, HolderLookup.Provider provider) {
         ItemStack frameStack = ItemStack.EMPTY;
 
-        for(int i = 0; i < craftingInventory.getContainerSize(); ++i) {
-            if (this.inputFrame.test(craftingInventory.getItem(i))) {
+        for(int i = 0; i < craftingInventory.size(); ++i) {
+            if (this.isFrameIngredient(craftingInventory.getItem(i))) {
                 if (!frameStack.isEmpty()) {
                     return ItemStack.EMPTY;
                 }
@@ -105,14 +105,18 @@ public class UnframingRecipe extends CustomRecipe {
             }
         }
 
-        if (!frameStack.isEmpty() && frameStack.hasTag()) {
+        if (!frameStack.isEmpty() && Helper.hasCustomData(frameStack)) {
             ItemStack outStack = new ItemStack(ZetterItems.PAINTING.get());
-            CompoundTag compoundnbt = frameStack.getTag().copy();
-            outStack.setTag(compoundnbt);
+            CompoundTag compoundnbt = Helper.getCustomData(frameStack);
+            Helper.setCustomData(outStack, compoundnbt);
             return outStack;
         } else {
             return ItemStack.EMPTY;
         }
+    }
+
+    private boolean isFrameIngredient(ItemStack stack) {
+        return this.inputFrame.test(stack) || stack.getItem() instanceof FrameItem;
     }
 
     /**
@@ -126,27 +130,27 @@ public class UnframingRecipe extends CustomRecipe {
      * Used to determine if this recipe can fit in a grid of the given width/height
      */
     public boolean canCraftInDimensions(int width, int height) {
-        return width >= 2 && height >= 2;
+        return width * height >= 1;
     }
 
     public static class Serializer implements RecipeSerializer<UnframingRecipe> {
-        @Override
-        public UnframingRecipe fromJson(ResourceLocation recipeId, JsonObject json) {
-            final JsonElement inputFrameJson = GsonHelper.getAsJsonObject(json, "frame");
-            final Ingredient inputFrame = Ingredient.fromJson(inputFrameJson);
+        public static final MapCodec<UnframingRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            Ingredient.CODEC_NONEMPTY.fieldOf("frame").forGetter(recipe -> recipe.inputFrame)
+        ).apply(instance, UnframingRecipe::new));
 
-            return new UnframingRecipe(recipeId, inputFrame);
+        public static final StreamCodec<RegistryFriendlyByteBuf, UnframingRecipe> STREAM_CODEC = StreamCodec.composite(
+            Ingredient.CONTENTS_STREAM_CODEC, recipe -> recipe.inputFrame,
+            UnframingRecipe::new
+        );
+
+        @Override
+        public MapCodec<UnframingRecipe> codec() {
+            return CODEC;
         }
 
         @Override
-        public UnframingRecipe fromNetwork(ResourceLocation recipeId, FriendlyByteBuf buffer) {
-            Ingredient frameIngredient = Ingredient.fromNetwork(buffer);
-            return new UnframingRecipe(recipeId, frameIngredient);
-        }
-
-        @Override
-        public void toNetwork(FriendlyByteBuf buffer, UnframingRecipe recipe) {
-            recipe.inputFrame.toNetwork(buffer);
+        public StreamCodec<RegistryFriendlyByteBuf, UnframingRecipe> streamCodec() {
+            return STREAM_CODEC;
         }
     }
 }

@@ -15,7 +15,7 @@ import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -128,6 +128,6 @@ public class ClientHelper {
         }
 
         CanvasOverlayViewEvent<?> viewEvent = new CanvasOverlayViewEvent<>(data);
-        MinecraftForge.EVENT_BUS.post(viewEvent);
+        NeoForge.EVENT_BUS.post(viewEvent);
     }
 }

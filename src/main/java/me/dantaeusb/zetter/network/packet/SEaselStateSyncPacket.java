@@ -6,14 +6,13 @@ import me.dantaeusb.zetter.entity.item.state.representation.CanvasSnapshot;
 import me.dantaeusb.zetter.network.ClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.util.LogicalSidedProvider;
-import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.common.util.LogicalSidedProvider;
+import net.neoforged.fml.LogicalSide;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * Send snapshot of a canvas and actions to keep every
@@ -124,9 +123,8 @@ public class SEaselStateSyncPacket {
         }
     }
 
-    public static void handle(final SEaselStateSyncPacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        LogicalSide sideReceived = ctx.getDirection().getReceptionSide();
+    public static void handle(final SEaselStateSyncPacket packetIn, PayloadContext ctx) {
+        LogicalSide sideReceived = (ctx.isClientSide() ? LogicalSide.CLIENT : LogicalSide.SERVER);
         ctx.setPacketHandled(true);
 
         Optional<Level> clientWorld = LogicalSidedProvider.CLIENTWORLD.get(sideReceived);

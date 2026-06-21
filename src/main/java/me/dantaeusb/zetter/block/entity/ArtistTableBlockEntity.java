@@ -5,7 +5,7 @@ import me.dantaeusb.zetter.core.ItemStackHandlerListener;
 import me.dantaeusb.zetter.core.ZetterBlockEntities;
 import me.dantaeusb.zetter.menu.ArtistTableMenu;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
@@ -22,10 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 import javax.annotation.Nullable;
 
@@ -58,7 +55,6 @@ public class ArtistTableBlockEntity extends BlockEntity implements ItemStackHand
     };
 
     private ArtistTableGridContainer artistTableGridContainer;
-    private final LazyOptional<ItemStackHandler> artistTableContainerOptional = LazyOptional.of(() -> this.artistTableGridContainer);
 
     private ArtistTableMenu.Mode mode = ArtistTableMenu.Mode.COMBINE;
 
@@ -110,25 +106,30 @@ public class ArtistTableBlockEntity extends BlockEntity implements ItemStackHand
         this.setChanged();
     }
 
-    @Override
+    public ArtistTableGridContainer getArtistTableGridContainer() {
+        return this.artistTableGridContainer;
+    }
+
     public AABB getRenderBoundingBox()
     {
-        return new AABB(this.getBlockPos(), this.getBlockPos().offset(1, 1, 1));
+        return AABB.encapsulatingFullBlocks(this.getBlockPos(), this.getBlockPos().offset(1, 1, 1));
     }
 
     // NBT stack
 
     @Override
-    public void saveAdditional(CompoundTag compoundTag)
+    public void saveAdditional(CompoundTag compoundTag, HolderLookup.Provider provider)
     {
-        CompoundTag gridContainer = this.artistTableGridContainer.serializeNBT();
+        super.saveAdditional(compoundTag, provider);
+
+        CompoundTag gridContainer = this.artistTableGridContainer.serializeNBT(provider);
         compoundTag.put(NBT_TAG_ARTIST_TABLE_CANVAS_STORAGE, gridContainer);
         compoundTag.putByte(NBT_TAG_ARTIST_TABLE_MODE, this.mode.getId());
     }
 
     @Override
-    public void load(CompoundTag compoundTag) {
-        super.load(compoundTag);
+    public void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
+        super.loadAdditional(compoundTag, provider);
 
         CompoundTag canvasStorageTag;
 
@@ -138,7 +139,7 @@ public class ArtistTableBlockEntity extends BlockEntity implements ItemStackHand
             canvasStorageTag = compoundTag.getCompound(NBT_TAG_DEPRECATED_ARTIST_TABLE_CANVAS_STORAGE);
         }
 
-        this.artistTableGridContainer.deserializeNBT(canvasStorageTag);
+        this.artistTableGridContainer.deserializeNBT(provider, canvasStorageTag);
 
         if (this.artistTableGridContainer.getSlots() != ArtistTableGridContainer.STORAGE_SIZE) {
             throw new IllegalArgumentException("Corrupted NBT: Number of inventory slots did not match expected.");
@@ -162,22 +163,22 @@ public class ArtistTableBlockEntity extends BlockEntity implements ItemStackHand
     }
 
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
-        this.load(packet.getTag());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider provider) {
+        this.loadWithComponents(packet.getTag(), provider);
     }
 
     @Override
-    public CompoundTag getUpdateTag()
+    public CompoundTag getUpdateTag(HolderLookup.Provider provider)
     {
         CompoundTag nbtTagCompound = new CompoundTag();
-        this.saveAdditional(nbtTagCompound);
+        this.saveAdditional(nbtTagCompound, provider);
         return nbtTagCompound;
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag)
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider provider)
     {
-        this.load(tag);
+        this.loadWithComponents(tag, provider);
     }
 
     /**
@@ -193,16 +194,6 @@ public class ArtistTableBlockEntity extends BlockEntity implements ItemStackHand
     @Override
     public Component getDisplayName() {
         return Component.translatable("container.zetter.artistTable");
-    }
-
-    @Override
-    public <T> LazyOptional<T> getCapability(Capability<T> capability, @Nullable Direction direction) {
-        if (capability == ForgeCapabilities.ITEM_HANDLER
-                && (direction == null || direction == Direction.UP || direction == Direction.DOWN)) {
-            return this.artistTableContainerOptional.cast();
-        }
-
-        return super.getCapability(capability, direction);
     }
 
     /**

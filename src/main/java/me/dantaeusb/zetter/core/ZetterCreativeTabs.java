@@ -3,12 +3,13 @@ package me.dantaeusb.zetter.core;
 import me.dantaeusb.zetter.Zetter;
 import me.dantaeusb.zetter.item.FrameItem;
 import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.registries.DeferredItem;
 
-@Mod.EventBusSubscriber(modid = Zetter.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Zetter.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public class ZetterCreativeTabs
 {
     @SubscribeEvent
@@ -20,7 +21,7 @@ public class ZetterCreativeTabs
             event.accept(ZetterItems.ARTIST_TABLE);
             event.accept(ZetterItems.EASEL);
 
-            for (RegistryObject<FrameItem> frameItem : ZetterItems.FRAMES.values()) {
+            for (DeferredItem<FrameItem> frameItem : ZetterItems.FRAMES.values()) {
                 event.accept(frameItem);
             }
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {

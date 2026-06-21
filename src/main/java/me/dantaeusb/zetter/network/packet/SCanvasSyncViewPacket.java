@@ -9,12 +9,11 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.util.LogicalSidedProvider;
-import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.common.util.LogicalSidedProvider;
+import net.neoforged.fml.LogicalSide;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public class SCanvasSyncViewPacket<T extends AbstractCanvasData> extends SCanvasSyncPacket<T> {
     private final InteractionHand hand;
@@ -36,7 +35,7 @@ public class SCanvasSyncViewPacket<T extends AbstractCanvasData> extends SCanvas
             byte handCode = networkBuffer.readByte();
             InteractionHand hand = InteractionHand.values()[handCode];
 
-            CanvasDataType<?> canvasDataType = ZetterRegistries.CANVAS_TYPE.get().getValue(new ResourceLocation(type));
+            CanvasDataType<?> canvasDataType = ZetterRegistries.CANVAS_TYPE.get(ResourceLocation.parse(type));
 
             if (canvasDataType == null) {
                 throw new IllegalArgumentException("Unable to find canvas type " + type);
@@ -60,7 +59,7 @@ public class SCanvasSyncViewPacket<T extends AbstractCanvasData> extends SCanvas
         networkBuffer.writeLong(this.timestamp);
         networkBuffer.writeByte(this.hand.ordinal());
 
-        CanvasDataType<T> canvasDataType = (CanvasDataType<T>) ZetterRegistries.CANVAS_TYPE.get().getValue(this.canvasData.getType().resourceLocation);
+        CanvasDataType<T> canvasDataType = (CanvasDataType<T>) ZetterRegistries.CANVAS_TYPE.get(this.canvasData.getType().resourceLocation);
 
         assert canvasDataType != null;
         canvasDataType.writePacketData(this.canvasData, networkBuffer);
@@ -71,9 +70,8 @@ public class SCanvasSyncViewPacket<T extends AbstractCanvasData> extends SCanvas
         return this.hand;
     }
 
-    public static void handle(final SCanvasSyncViewPacket<?> packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        LogicalSide sideReceived = ctx.getDirection().getReceptionSide();
+    public static void handle(final SCanvasSyncViewPacket<?> packetIn, PayloadContext ctx) {
+        LogicalSide sideReceived = (ctx.isClientSide() ? LogicalSide.CLIENT : LogicalSide.SERVER);
         ctx.setPacketHandled(true);
 
         Optional<Level> clientWorld = LogicalSidedProvider.CLIENTWORLD.get(sideReceived);

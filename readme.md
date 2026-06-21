@@ -1,27 +1,52 @@
-### Zetter - Minecraft Painting Mod
+### Zetter — Minecraft Painting Mod
 
-[![](http://cf.way2muchnoise.eu/zetter.svg)](https://www.curseforge.com/minecraft/mc-mods/zetter
-) [![](http://cf.way2muchnoise.eu/versions/zetter.svg)](https://www.curseforge.com/minecraft/mc-mods/zetter
-)
-[![Crowdin](https://badges.crowdin.net/zetter/localized.svg)](https://crowdin.com/project/zetter)
+Original project: https://github.com/dantaeusb-mc/Zetter
 
-Supported versions: 
-* 1.16.5 (0.20 LTS),
-* 1.17.1 (has an outdated build, won't update),
-* 1.18.2 (0.19), 
-* 1.19.2 (0.20 LTS),
-* 1.19.3 (master)
+An unofficial port of **Zetter — Minecraft Painting Mod** for **Minecraft 1.21.1** using the **NeoForge** mod loader.
 
-Download with CF: https://www.curseforge.com/minecraft/mc-mods/zetter
+> [!IMPORTANT]
+> I am not the author of the original Zetter mod. All rights to the original concept, source code, and resources belong to their respective authors.
+>
+> This port was created with the help of AI tools, including **OpenAI Codex**, as I currently have limited experience with Java development. So please do not judge it too harshly :D
 
-Download from Modrinth: https://modrinth.com/mod/zetter-painting-mod
+## About
 
-These are the **ONLY** official sources of the mod. Please avoid downloading from 3rd party sites.
+Zetter is a Minecraft mod focused on creating and using custom paintings.
 
-### Contribute translation
+This version is an unofficial adaptation of the mod for:
 
-https://crowdin.com/project/zetter
+* Minecraft **1.21.1**
+* **NeoForge**
+
+This project is not affiliated with the original Zetter developers and is not an official continuation of the mod.
 
 ### Licensing
 
-Mozilla Public License 2.0
+This project is licensed under the **Mozilla Public License 2.0**.
+
+
+### Zetter — Minecraft Painting Mod
+
+オリジナルプロジェクト：https://github.com/dantaeusb-mc/Zetter
+
+**Minecraft 1.21.1**および**NeoForge**向けに移植した、**Zetter — Minecraft Painting Mod**の非公式ポートです。
+
+> [!IMPORTANT]
+> 私はオリジナル版Zetterの作者ではありません。オリジナルのアイデア、ソースコード、リソースに関するすべての権利は、それぞれの作者および権利所有者に帰属します。
+>
+> このポートは、私のJava開発の経験がまだ十分ではないため、**OpenAI Codex**を含むAIツールの支援を受けて作成しました。あまり厳しく評価しないでください www
+
+## このプロジェクトについて
+
+Zetterは、オリジナルの絵画を作成して使用できるMinecraft用MODです。
+
+このバージョンは、以下の環境に対応する非公式の移植版です。
+
+* Minecraft **1.21.1**
+* **NeoForge**
+
+このプロジェクトは、オリジナル版Zetterの作者および開発者とは関係がなく、公式な後継版でもありません。
+
+### ライセンス
+
+このプロジェクトは、**Mozilla Public License 2.0**の下でライセンスされています。

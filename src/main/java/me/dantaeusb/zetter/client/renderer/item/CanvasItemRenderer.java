@@ -14,11 +14,11 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -74,9 +74,9 @@ public class CanvasItemRenderer extends BlockEntityWithoutLevelRenderer {
         poseStack.popPose();
     }
 
-    public static void handleModel(Map<ResourceLocation, BakedModel> modelRegistry)
+    public static void handleModel(Map<ModelResourceLocation, BakedModel> modelRegistry)
     {
-        ResourceLocation location = new ModelResourceLocation(Objects.requireNonNull(ForgeRegistries.ITEMS.getKey(ZetterItems.CANVAS.get())), "inventory");
+        ModelResourceLocation location = new ModelResourceLocation(Objects.requireNonNull(BuiltInRegistries.ITEM.getKey(ZetterItems.CANVAS.get())), "inventory");
         bakedModel = modelRegistry.get(location);
     }
 }

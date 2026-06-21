@@ -4,9 +4,8 @@ import me.dantaeusb.zetter.Zetter;
 import me.dantaeusb.zetter.network.ServerHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
-import java.util.function.Supplier;
 
 public class CCanvasHistoryActionPacket {
     public final int easelEntityId;
@@ -40,8 +39,7 @@ public class CCanvasHistoryActionPacket {
         buffer.writeBoolean(this.canceled);
     }
 
-    public static void handle(final CCanvasHistoryActionPacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
+    public static void handle(final CCanvasHistoryActionPacket packetIn, PayloadContext ctx) {
         ctx.setPacketHandled(true);
 
         final ServerPlayer sendingPlayer = ctx.getSender();

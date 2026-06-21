@@ -9,9 +9,13 @@ import me.dantaeusb.zetter.entity.item.PaintingEntity;
 import me.dantaeusb.zetter.storage.AbstractCanvasData;
 import me.dantaeusb.zetter.storage.PaintingData;
 import net.minecraft.Util;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import javax.annotation.Nullable;
@@ -39,6 +43,25 @@ public class Helper {
 
     public static final int CANVAS_CODE_MAX_LENGTH = 64;
     public static final int PAINTING_TITLE_MAX_LENGTH = 32;
+
+    public static boolean hasCustomData(ItemStack stack) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        return customData != null && !customData.isEmpty();
+    }
+
+    public static CompoundTag getCustomData(ItemStack stack) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        return customData == null ? null : customData.copyTag();
+    }
+
+    public static CompoundTag getOrCreateCustomData(ItemStack stack) {
+        CompoundTag tag = getCustomData(stack);
+        return tag == null ? new CompoundTag() : tag;
+    }
+
+    public static void setCustomData(ItemStack stack, CompoundTag tag) {
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
 
     /**
      * Basic resolution is a minimal resolution of a painting, 16px
@@ -71,9 +94,9 @@ public class Helper {
 
         if (!level.isClientSide()) {
             // looking for a server canvas tracker in the overworld, since canvases are world-independent
-            canvasTracker = level.getServer().overworld().getCapability(ZetterCapabilities.CANVAS_TRACKER).orElse(null);
+            canvasTracker = level.getServer().overworld().getData(ZetterCapabilities.CANVAS_TRACKER);
         } else {
-            canvasTracker = level.getCapability(ZetterCapabilities.CANVAS_TRACKER).orElse(null);
+            canvasTracker = level.getData(ZetterCapabilities.CANVAS_TRACKER);
         }
 
         return canvasTracker;
@@ -84,7 +107,7 @@ public class Helper {
 
         if (!world.isClientSide()) {
             // looking for a server canvas tracker in the overworld, since canvases are world-independent
-            paintingRegistry = world.getServer().overworld().getCapability(ZetterCapabilities.PAINTING_REGISTRY).orElse(null);
+            paintingRegistry = world.getServer().overworld().getData(ZetterCapabilities.PAINTING_REGISTRY);
         } else {
             throw new IllegalArgumentException("Painting Registry is not supposed to exist on client");
         }

@@ -1,5 +1,6 @@
 package me.dantaeusb.zetter.item;
 
+import me.dantaeusb.zetter.core.Helper;
 import me.dantaeusb.zetter.entity.item.PaintingEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -38,7 +39,7 @@ public class FrameItem extends PaintingItem {
      */
     @Override
     public Component getName(ItemStack stack) {
-        if (stack.hasTag()) {
+        if (Helper.hasCustomData(stack)) {
             String paintingName = getCachedPaintingName(stack);
 
             if (StringUtil.isNullOrEmpty(paintingName)) {

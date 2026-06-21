@@ -12,7 +12,7 @@ import me.dantaeusb.zetter.network.packet.CCanvasUnloadRequestPacket;
 import me.dantaeusb.zetter.storage.AbstractCanvasData;
 import me.dantaeusb.zetter.storage.CanvasData;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.neoforge.common.NeoForge;
 
 import javax.annotation.Nullable;
 import java.util.BitSet;
@@ -77,7 +77,7 @@ public class CanvasClientTracker implements CanvasTracker {
         }
 
         CanvasRegisterEvent.Pre preEvent = new CanvasRegisterEvent.Pre(canvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(preEvent);
+        NeoForge.EVENT_BUS.post(preEvent);
 
         if (!preEvent.isCanceled()) {
             this.canvases.put(canvasCode, canvasData);
@@ -87,7 +87,7 @@ public class CanvasClientTracker implements CanvasTracker {
         }
 
         CanvasRegisterEvent.Post postEvent = new CanvasRegisterEvent.Post(canvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(postEvent);
+        NeoForge.EVENT_BUS.post(postEvent);
     }
 
     @Override
@@ -102,7 +102,7 @@ public class CanvasClientTracker implements CanvasTracker {
         long timestamp = System.currentTimeMillis();
 
         CanvasUnregisterEvent.Pre preEvent = new CanvasUnregisterEvent.Pre(removedCanvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(preEvent);
+        NeoForge.EVENT_BUS.post(preEvent);
 
         // Remove existing entry if we have one to replace with a new one
         this.canvases.remove(removedCanvasCode);
@@ -112,11 +112,11 @@ public class CanvasClientTracker implements CanvasTracker {
         if (canvasData.isManaged()) {
             // Notifying server that we're no longer tracking it
             CCanvasUnloadRequestPacket unloadPacket = new CCanvasUnloadRequestPacket(removedCanvasCode);
-            ZetterNetwork.simpleChannel.sendToServer(unloadPacket);
+            ZetterNetwork.sendToServer(unloadPacket);
         }
 
         CanvasUnregisterEvent.Post postEvent = new CanvasUnregisterEvent.Post(removedCanvasCode, canvasData, this.level, timestamp);
-        MinecraftForge.EVENT_BUS.post(postEvent);
+        NeoForge.EVENT_BUS.post(postEvent);
     }
 
     /*

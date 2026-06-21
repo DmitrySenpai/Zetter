@@ -1,13 +1,16 @@
 package me.dantaeusb.zetter.block;
 
+import com.mojang.serialization.MapCodec;
 import me.dantaeusb.zetter.block.entity.ArtistTableBlockEntity;
 import me.dantaeusb.zetter.network.packet.SArtistTableMenuCreatePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
@@ -16,11 +19,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
 
 public class ArtistTableBlock extends BaseEntityBlock {
+    public static final MapCodec<ArtistTableBlock> CODEC = simpleCodec(ArtistTableBlock::new);
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
     public ArtistTableBlock(Properties properties) {
@@ -29,17 +32,33 @@ public class ArtistTableBlock extends BaseEntityBlock {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     @Nullable
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ArtistTableBlockEntity(pos, state);
     }
 
-    public InteractionResult use(BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit) {
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level worldIn, BlockPos pos, Player player, BlockHitResult hit) {
         if (worldIn.isClientSide) {
             return InteractionResult.SUCCESS;
         } else {
             this.interactWith(worldIn, pos, player);
             return InteractionResult.CONSUME;
+        }
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level worldIn, BlockPos pos, Player player, InteractionHand handIn, BlockHitResult hit) {
+        if (worldIn.isClientSide) {
+            return ItemInteractionResult.SUCCESS;
+        } else {
+            this.interactWith(worldIn, pos, player);
+            return ItemInteractionResult.CONSUME;
         }
     }
 
@@ -52,7 +71,7 @@ public class ArtistTableBlock extends BaseEntityBlock {
 
         if (currentTileEntity instanceof ArtistTableBlockEntity) {
             if (!level.isClientSide()) {
-                NetworkHooks.openScreen((ServerPlayer) player, (ArtistTableBlockEntity) currentTileEntity, (packetBuffer) -> {
+                ((ServerPlayer) player).openMenu((ArtistTableBlockEntity) currentTileEntity, (packetBuffer) -> {
                     SArtistTableMenuCreatePacket packet = new SArtistTableMenuCreatePacket(currentTileEntity.getBlockPos(), ((ArtistTableBlockEntity) currentTileEntity).getMode());
                     packet.writePacketData(packetBuffer);
                 });

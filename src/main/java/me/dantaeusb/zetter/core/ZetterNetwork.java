@@ -2,24 +2,31 @@ package me.dantaeusb.zetter.core;
 
 import me.dantaeusb.zetter.Zetter;
 import me.dantaeusb.zetter.network.packet.*;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
-import static net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT;
-import static net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER;
-
-@Mod.EventBusSubscriber(modid = Zetter.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Zetter.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public class ZetterNetwork {
-    public static SimpleChannel simpleChannel;
     // @todo: [LOW] Rename this on release, it's zetter:zetter_channel 0.1
-    public static final ResourceLocation simpleChannelRL = new ResourceLocation(Zetter.MOD_ID, "zetter_channel");
-    public static final String MESSAGE_PROTOCOL_VERSION = "0.3";
+    public static final ResourceLocation simpleChannelRL = ResourceLocation.fromNamespaceAndPath(Zetter.MOD_ID, "zetter_channel");
+    public static final int MESSAGE_PROTOCOL_VERSION = 3;
 
     public static final byte PAINTING_FRAME = 21;
     public static final byte CANVAS_REQUEST = 22;
@@ -48,112 +55,162 @@ public class ZetterNetwork {
     public static final byte CANVAS_EXPORT = 41;
     public static final byte CANVAS_EXPORT_ERROR = 42;
 
+    private static final Map<Integer, PacketRegistration<?>> REGISTRATIONS_BY_ID = new HashMap<>();
+    private static final Map<Class<?>, PacketRegistration<?>> REGISTRATIONS_BY_CLASS = new HashMap<>();
+
     @SubscribeEvent
     @SuppressWarnings("unused")
-    public static void onCommonSetupEvent(FMLCommonSetupEvent event) {
-        simpleChannel = NetworkRegistry.newSimpleChannel(
-            simpleChannelRL,
-            () -> MESSAGE_PROTOCOL_VERSION,
-            ZetterNetwork::isThisProtocolAcceptedByClient,
-            ZetterNetwork::isThisProtocolAcceptedByServer
+    public static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
+        REGISTRATIONS_BY_ID.clear();
+        REGISTRATIONS_BY_CLASS.clear();
+
+        registerMessage(PAINTING_FRAME, CCanvasActionPacket.class, CCanvasActionPacket::writePacketData, CCanvasActionPacket::readPacketData, CCanvasActionPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(CANVAS_REQUEST, CCanvasRequestPacket.class, CCanvasRequestPacket::writePacketData, CCanvasRequestPacket::readPacketData, CCanvasRequestPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(PAINTING_UNLOAD_CANVAS, CCanvasUnloadRequestPacket.class, CCanvasUnloadRequestPacket::writePacketData, CCanvasUnloadRequestPacket::readPacketData, CCanvasUnloadRequestPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(CANVAS_SYNC, SCanvasSyncPacket.class, SCanvasSyncPacket::writePacketData, SCanvasSyncPacket::readPacketData, SCanvasSyncPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(PALETTE_UPDATE, CPaletteUpdatePacket.class, CPaletteUpdatePacket::writePacketData, CPaletteUpdatePacket::readPacketData, CPaletteUpdatePacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(PAINTING_RENAME, CSignPaintingPacket.class, CSignPaintingPacket::writePacketData, CSignPaintingPacket::readPacketData, CSignPaintingPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(CANVAS_SYNC_VIEW, SCanvasSyncViewPacket.class, SCanvasSyncViewPacket::writePacketData, SCanvasSyncViewPacket::readPacketData, SCanvasSyncViewPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(CANVAS_REQUEST_SYNC_VIEW, CCanvasRequestViewPacket.class, CCanvasRequestViewPacket::writePacketData, CCanvasRequestViewPacket::readPacketData, CCanvasRequestViewPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(CANVAS_REMOVE, SCanvasRemovalPacket.class, SCanvasRemovalPacket::writePacketData, SCanvasRemovalPacket::readPacketData, SCanvasRemovalPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(EASEL_SYNC, SEaselStateSyncPacket.class, SEaselStateSyncPacket::writePacketData, SEaselStateSyncPacket::readPacketData, SEaselStateSyncPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(HISTORY_UPDATE, CCanvasHistoryActionPacket.class, CCanvasHistoryActionPacket::writePacketData, CCanvasHistoryActionPacket::readPacketData, CCanvasHistoryActionPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(ARTIST_TABLE_MODE, CArtistTableModeChangePacket.class, CArtistTableModeChangePacket::writePacketData, CArtistTableModeChangePacket::readPacketData, CArtistTableModeChangePacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(HISTORY_SYNC, SCanvasHistoryActionPacket.class, SCanvasHistoryActionPacket::writePacketData, SCanvasHistoryActionPacket::readPacketData, SCanvasHistoryActionPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(HISTORY_RESET, SEaselResetPacket.class, SEaselResetPacket::writePacketData, SEaselResetPacket::readPacketData, SEaselResetPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(EASEL_CANVAS_INIT, SEaselCanvasInitializationPacket.class, SEaselCanvasInitializationPacket::writePacketData, SEaselCanvasInitializationPacket::readPacketData, SEaselCanvasInitializationPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(CANVAS_REQUEST_EXPORT, CCanvasRequestExportPacket.class, CCanvasRequestExportPacket::writePacketData, CCanvasRequestExportPacket::readPacketData, CCanvasRequestExportPacket::handle, PacketFlow.SERVERBOUND);
+        registerMessage(CANVAS_EXPORT, SCanvasSyncExportPacket.class, SCanvasSyncExportPacket::writePacketData, SCanvasSyncExportPacket::readPacketData, SCanvasSyncExportPacket::handle, PacketFlow.CLIENTBOUND);
+        registerMessage(CANVAS_EXPORT_ERROR, SCanvasSyncExportErrorPacket.class, SCanvasSyncExportErrorPacket::writePacketData, SCanvasSyncExportErrorPacket::readPacketData, SCanvasSyncExportErrorPacket::handle, PacketFlow.CLIENTBOUND);
+
+        event.registrar(Zetter.MOD_ID)
+            .versioned(String.valueOf(MESSAGE_PROTOCOL_VERSION))
+            .playBidirectional(ZetterPayload.TYPE, ZetterPayload.STREAM_CODEC, ZetterNetwork::handlePayload);
+    }
+
+    public static void sendToServer(Object packet) {
+        PacketDistributor.sendToServer(new ZetterPayload(getPacketId(packet), packet));
+    }
+
+    public static void sendToPlayer(ServerPlayer player, Object packet) {
+        PacketDistributor.sendToPlayer(player, new ZetterPayload(getPacketId(packet), packet));
+    }
+
+    private static <T> void registerMessage(
+        int id,
+        Class<T> packetClass,
+        BiConsumer<T, FriendlyByteBuf> encoder,
+        Function<FriendlyByteBuf, T> decoder,
+        BiConsumer<T, PayloadContext> consumer,
+        PacketFlow direction
+    ) {
+        PacketRegistration<T> registration = new PacketRegistration<>(id, packetClass, encoder, decoder, consumer, direction);
+        REGISTRATIONS_BY_ID.put(id, registration);
+        REGISTRATIONS_BY_CLASS.put(packetClass, registration);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void handlePayload(ZetterPayload payload, IPayloadContext context) {
+        PacketRegistration<Object> registration = (PacketRegistration<Object>) REGISTRATIONS_BY_ID.get(payload.packetId());
+
+        if (registration == null) {
+            Zetter.LOG.warn("Unknown Zetter packet id received: {}", payload.packetId());
+            return;
+        }
+
+        if (registration.direction() != context.flow()) {
+            Zetter.LOG.warn("Zetter packet {} received on wrong side: {}", payload.packetId(), context.flow());
+            return;
+        }
+
+        registration.consumer().accept(payload.packet(), new PayloadContext(context));
+    }
+
+    private static int getPacketId(Object packet) {
+        PacketRegistration<?> registration = REGISTRATIONS_BY_CLASS.get(packet.getClass());
+
+        if (registration == null) {
+            throw new IllegalArgumentException("Unregistered Zetter packet: " + packet.getClass().getName());
+        }
+
+        return registration.id();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void writePacket(Object packet, FriendlyByteBuf buffer) {
+        PacketRegistration<Object> registration = (PacketRegistration<Object>) REGISTRATIONS_BY_CLASS.get(packet.getClass());
+
+        if (registration == null) {
+            throw new IllegalArgumentException("Unregistered Zetter packet: " + packet.getClass().getName());
+        }
+
+        registration.encoder().accept(packet, buffer);
+    }
+
+    private static Object readPacket(int packetId, FriendlyByteBuf buffer) {
+        PacketRegistration<?> registration = REGISTRATIONS_BY_ID.get(packetId);
+
+        if (registration == null) {
+            throw new IllegalArgumentException("Unknown Zetter packet id: " + packetId);
+        }
+
+        return registration.decoder().apply(buffer);
+    }
+
+    private record PacketRegistration<T>(
+        int id,
+        Class<T> packetClass,
+        BiConsumer<T, FriendlyByteBuf> encoder,
+        Function<FriendlyByteBuf, T> decoder,
+        BiConsumer<T, PayloadContext> consumer,
+        PacketFlow direction
+    ) {
+    }
+
+    public record ZetterPayload(int packetId, Object packet) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<ZetterPayload> TYPE = new CustomPacketPayload.Type<>(simpleChannelRL);
+        public static final StreamCodec<RegistryFriendlyByteBuf, ZetterPayload> STREAM_CODEC = StreamCodec.of(
+            (buffer, payload) -> payload.write(buffer),
+            ZetterPayload::read
         );
 
-        simpleChannel.registerMessage(PAINTING_FRAME, CCanvasActionPacket.class,
-            CCanvasActionPacket::writePacketData, CCanvasActionPacket::readPacketData,
-            CCanvasActionPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
+        private static ZetterPayload read(RegistryFriendlyByteBuf buffer) {
+            int packetId = buffer.readVarInt();
+            return new ZetterPayload(packetId, readPacket(packetId, buffer));
+        }
 
-        simpleChannel.registerMessage(CANVAS_REQUEST, CCanvasRequestPacket.class,
-            CCanvasRequestPacket::writePacketData, CCanvasRequestPacket::readPacketData,
-            CCanvasRequestPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
+        private void write(RegistryFriendlyByteBuf buffer) {
+            buffer.writeVarInt(this.packetId);
+            writePacket(this.packet, buffer);
+        }
 
-        simpleChannel.registerMessage(PAINTING_UNLOAD_CANVAS, CCanvasUnloadRequestPacket.class,
-            CCanvasUnloadRequestPacket::writePacketData, CCanvasUnloadRequestPacket::readPacketData,
-            CCanvasUnloadRequestPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(CANVAS_SYNC, SCanvasSyncPacket.class,
-            SCanvasSyncPacket::writePacketData, SCanvasSyncPacket::readPacketData,
-            SCanvasSyncPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(PALETTE_UPDATE, CPaletteUpdatePacket.class,
-            CPaletteUpdatePacket::writePacketData, CPaletteUpdatePacket::readPacketData,
-            CPaletteUpdatePacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(PAINTING_RENAME, CSignPaintingPacket.class,
-            CSignPaintingPacket::writePacketData, CSignPaintingPacket::readPacketData,
-            CSignPaintingPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(CANVAS_SYNC_VIEW, SCanvasSyncViewPacket.class,
-            SCanvasSyncViewPacket::writePacketData, SCanvasSyncViewPacket::readPacketData,
-            SCanvasSyncViewPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(CANVAS_REQUEST_SYNC_VIEW, CCanvasRequestViewPacket.class,
-            CCanvasRequestViewPacket::writePacketData, CCanvasRequestViewPacket::readPacketData,
-            CCanvasRequestViewPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(CANVAS_REMOVE, SCanvasRemovalPacket.class,
-            SCanvasRemovalPacket::writePacketData, SCanvasRemovalPacket::readPacketData,
-            SCanvasRemovalPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(EASEL_SYNC, SEaselStateSyncPacket.class,
-            SEaselStateSyncPacket::writePacketData, SEaselStateSyncPacket::readPacketData,
-            SEaselStateSyncPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(HISTORY_UPDATE, CCanvasHistoryActionPacket.class,
-            CCanvasHistoryActionPacket::writePacketData, CCanvasHistoryActionPacket::readPacketData,
-            CCanvasHistoryActionPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(ARTIST_TABLE_MODE, CArtistTableModeChangePacket.class,
-            CArtistTableModeChangePacket::writePacketData, CArtistTableModeChangePacket::readPacketData,
-            CArtistTableModeChangePacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(HISTORY_SYNC, SCanvasHistoryActionPacket.class,
-            SCanvasHistoryActionPacket::writePacketData, SCanvasHistoryActionPacket::readPacketData,
-            SCanvasHistoryActionPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(HISTORY_RESET, SEaselResetPacket.class,
-            SEaselResetPacket::writePacketData, SEaselResetPacket::readPacketData,
-            SEaselResetPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(EASEL_CANVAS_INIT, SEaselCanvasInitializationPacket.class,
-            SEaselCanvasInitializationPacket::writePacketData, SEaselCanvasInitializationPacket::readPacketData,
-            SEaselCanvasInitializationPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(CANVAS_REQUEST_EXPORT, CCanvasRequestExportPacket.class,
-            CCanvasRequestExportPacket::writePacketData, CCanvasRequestExportPacket::readPacketData,
-            CCanvasRequestExportPacket::handle,
-            Optional.of(PLAY_TO_SERVER));
-
-        simpleChannel.registerMessage(CANVAS_EXPORT, SCanvasSyncExportPacket.class,
-            SCanvasSyncExportPacket::writePacketData, SCanvasSyncExportPacket::readPacketData,
-            SCanvasSyncExportPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
-
-        simpleChannel.registerMessage(CANVAS_EXPORT_ERROR, SCanvasSyncExportErrorPacket.class,
-            SCanvasSyncExportErrorPacket::writePacketData, SCanvasSyncExportErrorPacket::readPacketData,
-            SCanvasSyncExportErrorPacket::handle,
-            Optional.of(PLAY_TO_CLIENT));
+        @Override
+        public CustomPacketPayload.Type<ZetterPayload> type() {
+            return TYPE;
+        }
     }
 
-    public static boolean isThisProtocolAcceptedByClient(String protocolVersion) {
-        return ZetterNetwork.MESSAGE_PROTOCOL_VERSION.equals(protocolVersion);
-    }
+    public static class PayloadContext {
+        private final IPayloadContext context;
 
-    public static boolean isThisProtocolAcceptedByServer(String protocolVersion) {
-        return ZetterNetwork.MESSAGE_PROTOCOL_VERSION.equals(protocolVersion);
+        private PayloadContext(IPayloadContext context) {
+            this.context = context;
+        }
+
+        public boolean isClientSide() {
+            return this.context.flow() == PacketFlow.CLIENTBOUND;
+        }
+
+        public void setPacketHandled(boolean handled) {
+        }
+
+        public ServerPlayer getSender() {
+            Player player = this.context.player();
+            return player instanceof ServerPlayer serverPlayer ? serverPlayer : null;
+        }
+
+        public CompletableFuture<Void> enqueueWork(Runnable runnable) {
+            return this.context.enqueueWork(runnable);
+        }
     }
 }

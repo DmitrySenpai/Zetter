@@ -4,12 +4,11 @@ import me.dantaeusb.zetter.Zetter;
 import me.dantaeusb.zetter.network.ClientHandler;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.util.LogicalSidedProvider;
-import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.common.util.LogicalSidedProvider;
+import net.neoforged.fml.LogicalSide;
+import me.dantaeusb.zetter.core.ZetterNetwork.PayloadContext;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * Send snapshot of a canvas, used only for easel when drawing, a bit more specific
@@ -47,9 +46,8 @@ public class SEaselResetPacket {
         networkBuffer.writeInt(this.easelEntityId);
     }
 
-    public static void handle(final SEaselResetPacket packetIn, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        LogicalSide sideReceived = ctx.getDirection().getReceptionSide();
+    public static void handle(final SEaselResetPacket packetIn, PayloadContext ctx) {
+        LogicalSide sideReceived = (ctx.isClientSide() ? LogicalSide.CLIENT : LogicalSide.SERVER);
         ctx.setPacketHandled(true);
 
         Optional<Level> clientWorld = LogicalSidedProvider.CLIENTWORLD.get(sideReceived);
